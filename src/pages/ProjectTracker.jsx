@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ProjectCard } from '../components/ProjectCard'
 import { ProjectForm } from '../components/ProjectForm'
 import { StatusFilterChips } from '../components/StatusFilterChips'
@@ -76,24 +76,50 @@ export function ProjectTracker({ projects, setProjects }) {
   const [filterOverdue, setFilterOverdue] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('due')
+  const [showArchived, setShowArchived] = useState(false)
+  const [recentChange, setRecentChange] = useState(null) // { id, prevStatus, timeoutId }
+
+  // Cmd/Ctrl+N to open Add Project form
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (formOpen) return
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault()
+        setFormOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [formOpen])
+
+  const viewProjects = useMemo(
+    () => projects.filter(p => !!p.archived === showArchived),
+    [projects, showArchived]
+  )
 
   const displayed = useMemo(
-    () => applyFiltersAndSort(projects, activeStatuses, filterOverdue, searchQuery, sortBy),
-    [projects, activeStatuses, filterOverdue, searchQuery, sortBy]
+    () => applyFiltersAndSort(viewProjects, activeStatuses, filterOverdue, searchQuery, sortBy),
+    [viewProjects, activeStatuses, filterOverdue, searchQuery, sortBy]
   )
 
   const statusCounts = useMemo(() => {
     const counts = {}
     STATUSES.forEach(s => { counts[s] = 0 })
-    projects.forEach(p => { counts[p.status] = (counts[p.status] || 0) + 1 })
-    counts.Overdue = projects.filter(isOverdue).length
+    viewProjects.forEach(p => { counts[p.status] = (counts[p.status] || 0) + 1 })
+    counts.Overdue = viewProjects.filter(isOverdue).length
     return counts
-  }, [projects])
+  }, [viewProjects])
+
+  const archivedCount = useMemo(() => projects.filter(p => p.archived).length, [projects])
 
   function handleSave(formData) {
     if (editingProject) {
       setProjects(prev =>
-        prev.map(p => (p.id === editingProject.id ? { ...formData, id: editingProject.id } : p))
+        prev.map(p =>
+          p.id === editingProject.id
+            ? { ...formData, id: editingProject.id, archived: editingProject.archived ?? false }
+            : p
+        )
       )
     } else {
       setProjects(prev => [...prev, { ...formData, id: generateId() }])
@@ -111,9 +137,26 @@ export function ProjectTracker({ projects, setProjects }) {
   }
 
   function handleStatusChange(id, newStatus) {
-    setProjects(prev =>
-      prev.map(p => (p.id === id ? { ...p, status: newStatus } : p))
-    )
+    const current = projects.find(p => p.id === id)
+    if (!current) return
+    const prevStatus = current.status
+
+    setProjects(ps => ps.map(p => (p.id === id ? { ...p, status: newStatus } : p)))
+
+    if (recentChange) clearTimeout(recentChange.timeoutId)
+    const timeoutId = setTimeout(() => setRecentChange(null), 4000)
+    setRecentChange({ id, prevStatus, timeoutId })
+  }
+
+  function handleUndoStatus() {
+    if (!recentChange) return
+    clearTimeout(recentChange.timeoutId)
+    setProjects(ps => ps.map(p => (p.id === recentChange.id ? { ...p, status: recentChange.prevStatus } : p)))
+    setRecentChange(null)
+  }
+
+  function handleArchive(id) {
+    setProjects(prev => prev.map(p => (p.id === id ? { ...p, archived: !p.archived } : p)))
   }
 
   function closeForm() {
@@ -127,7 +170,7 @@ export function ProjectTracker({ projects, setProjects }) {
     )
   }
 
-  const total = projects.length
+  const total = viewProjects.length
   const showing = displayed.length
   const isFiltered = activeStatuses.length > 0 || filterOverdue || searchQuery.trim()
 
@@ -141,16 +184,26 @@ export function ProjectTracker({ projects, setProjects }) {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {showArchived ? 'Archived Projects' : 'Projects'}
+          </h2>
           <p className="mt-0.5 text-sm text-gray-500">
             {isFiltered
               ? `${showing} of ${total} ${total === 1 ? 'project' : 'projects'}`
               : `${total} ${total === 1 ? 'project' : 'projects'}`}
           </p>
         </div>
-        <button onClick={() => setFormOpen(true)} className="btn-primary">
-          + Add Project
-        </button>
+        <div className="flex items-center gap-3">
+          {showArchived ? (
+            <button onClick={() => setShowArchived(false)} className="btn-secondary">
+              ← Active projects
+            </button>
+          ) : (
+            <button onClick={() => setFormOpen(true)} className="btn-primary">
+              + Add Project
+            </button>
+          )}
+        </div>
       </div>
 
       {total > 0 && (
@@ -178,6 +231,7 @@ export function ProjectTracker({ projects, setProjects }) {
             type="search"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') setSearchQuery('') }}
             placeholder="Search by project or member…"
             className="input mb-3"
           />
@@ -224,8 +278,14 @@ export function ProjectTracker({ projects, setProjects }) {
 
       {total === 0 ? (
         <div className="py-20 text-center text-gray-400">
-          <p className="text-lg">No projects yet.</p>
-          <p className="mt-1 text-sm">Click &ldquo;Add Project&rdquo; to get started.</p>
+          {showArchived ? (
+            <p className="text-lg">No archived projects.</p>
+          ) : (
+            <>
+              <p className="text-lg">No projects yet.</p>
+              <p className="mt-1 text-sm">Click &ldquo;Add Project&rdquo; or press Cmd+N to get started.</p>
+            </>
+          )}
         </div>
       ) : displayed.length === 0 ? (
         <div className="py-20 text-center text-gray-400">
@@ -243,8 +303,22 @@ export function ProjectTracker({ projects, setProjects }) {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onStatusChange={handleStatusChange}
+              onArchive={handleArchive}
+              showUndo={recentChange?.id === project.id}
+              onUndo={handleUndoStatus}
             />
           ))}
+        </div>
+      )}
+
+      {!showArchived && archivedCount > 0 && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setShowArchived(true)}
+            className="text-sm text-gray-400 hover:text-gray-600"
+          >
+            Show archived ({archivedCount})
+          </button>
         </div>
       )}
 

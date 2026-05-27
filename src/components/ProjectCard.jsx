@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { STATUS_STYLES, STATUSES, PRIORITY_STYLES, STATUS_BORDER_STYLES } from '../utils/constants'
 import { formatDueDate } from '../utils/formatDate'
 
-/** @param {{ project: object, onEdit: function, onDelete: function, onStatusChange: function }} props */
-export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
+/** @param {{ project: object, onEdit: function, onDelete: function, onStatusChange: function, onArchive: function, showUndo: boolean, onUndo: function }} props */
+export function ProjectCard({ project, onEdit, onDelete, onStatusChange, onArchive, showUndo, onUndo }) {
   const [showConfirm, setShowConfirm] = useState(false)
 
   const statusStyle = STATUS_STYLES[project.status] ?? 'bg-gray-100 text-gray-600'
@@ -46,7 +46,7 @@ export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
         <Row label="Member" value={project.member} />
         {due && (
           <div className="flex gap-1">
-            <dt className="shrink-0 font-medium text-gray-400">Due:</dt>
+            <dt className="shrink-0 font-medium text-gray-500">Due:</dt>
             <dd className={due.overdue && project.status !== 'Complete' ? 'font-medium text-red-600' : 'text-gray-700'}>
               {due.label}{due.overdue && project.status !== 'Complete' && ' — Overdue'}
             </dd>
@@ -76,19 +76,44 @@ export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
             </div>
           </div>
         ) : (
-          <div className="flex gap-3">
-            <button
-              onClick={() => onEdit(project)}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => setShowConfirm(true)}
-              className="text-sm font-medium text-red-500 hover:text-red-700"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-3">
+              <button
+                onClick={() => onEdit(project)}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+              >
+                Edit
+              </button>
+              {project.archived ? (
+                <button
+                  onClick={() => onArchive(project.id)}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                >
+                  Unarchive
+                </button>
+              ) : project.status === 'Complete' ? (
+                <button
+                  onClick={() => onArchive(project.id)}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                >
+                  Archive
+                </button>
+              ) : null}
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="text-sm font-medium text-red-500 hover:text-red-700"
+              >
+                Delete
+              </button>
+            </div>
+            {showUndo && (
+              <button
+                onClick={onUndo}
+                className="text-xs font-medium text-amber-600 hover:text-amber-800"
+              >
+                Undo status
+              </button>
+            )}
           </div>
         )}
       </div>

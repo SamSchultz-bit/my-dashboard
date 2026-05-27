@@ -6,7 +6,7 @@ import { STATUS_STYLES } from '../utils/constants'
 
 function buildItems(projects, activeStatuses) {
   return projects
-    .filter(p => activeStatuses.includes(p.status) && p.waitingOn?.trim())
+    .filter(p => activeStatuses.includes(p.status) && !p.archived && p.waitingOn?.trim())
     .map(p => ({
       key: p.id,
       text: p.waitingOn.trim(),
@@ -46,7 +46,8 @@ export function WaitingOnList({ projects }) {
           <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
           Waiting On
         </h3>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <p className="mt-1.5 text-xs text-gray-400">Filter by status</p>
+        <div className="mt-1 flex flex-wrap gap-1.5">
           <StatusFilterChips activeStatuses={activeStatuses} onToggle={toggleStatus} />
         </div>
       </div>

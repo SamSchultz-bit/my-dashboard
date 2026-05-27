@@ -10,11 +10,13 @@ const EMPTY = {
   dueDate: '',
   waitingOn: '',
   nextSteps: '',
+  archived: false,
 }
 
 /** @param {{ project?: object, onSave: function, onCancel: function }} props */
 export function ProjectForm({ project, onSave, onCancel }) {
   const [form, setForm] = useState(project ?? EMPTY)
+  const [nameError, setNameError] = useState(false)
   const panelRef = useRef(null)
 
   useEffect(() => {
@@ -50,12 +52,16 @@ export function ProjectForm({ project, onSave, onCancel }) {
 
   function handleChange(e) {
     const { name, value } = e.target
+    if (name === 'projectName' && nameError) setNameError(false)
     setForm(prev => ({ ...prev, [name]: value }))
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!form.projectName.trim()) return
+    if (!form.projectName.trim()) {
+      setNameError(true)
+      return
+    }
     onSave(form)
   }
 
@@ -76,10 +82,12 @@ export function ProjectForm({ project, onSave, onCancel }) {
               value={form.projectName}
               onChange={handleChange}
               placeholder="e.g. Smith Auto Loan"
-              className="input"
-              required
+              className={`input ${nameError ? 'border-red-500 focus:border-red-500 focus:ring-red-200' : ''}`}
               autoFocus
             />
+            {nameError && (
+              <p className="mt-0.5 text-xs text-red-600">Project name is required.</p>
+            )}
           </Field>
 
           <Field label="Member Name">

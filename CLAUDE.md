@@ -1,7 +1,6 @@
 # Project: Personal Dashboard
 
-A personal dashboard/tracker app built with React and Vite.
-[Update this line with a one-sentence description of what you're tracking once you decide.]
+A personal dashboard for tracking mortgage and loan applications — statuses, next steps, blockers, and due dates.
 
 ---
 
@@ -9,7 +8,7 @@ A personal dashboard/tracker app built with React and Vite.
 
 - **Framework:** React 18 + Vite
 - **Node:** 20 (via nvm — run `nvm use 20` if needed)
-- **Styling:** [Tailwind CSS / plain CSS — update when decided]
+- **Styling:** Tailwind CSS v4
 - **Routing:** React Router v6 (if multi-page) or single-page with conditional rendering
 - **State:** React useState / useContext to start; upgrade to Zustand if it gets complex
 - **Persistence:** localStorage for now (no backend); swap for a real API later if needed
@@ -89,10 +88,14 @@ src/
 
 ## Current Status
 
-[Update this section as you build — it helps Claude understand where things stand at the start of each session.]
-
-- [ ] Project scaffolded with Vite
-- [ ] Tailwind (or chosen styling) configured
-- [ ] Core layout / navigation in place
-- [ ] First tracker feature built
-- [ ] localStorage persistence wired up
+- [x] Project scaffolded with Vite
+- [x] Tailwind CSS v4 configured
+- [x] Core layout — header, main grid, sticky sidebar
+- [x] Project tracker — add, edit, delete, status cycling, filter, sort, search
+- [x] localStorage persistence via `useLocalStorage` hook
+- [x] Sidebar — Next Steps and Waiting On lists with status filters
+- [x] Archive completed projects (Archive/Unarchive button on cards)
+- [x] Export / Import as JSON (header buttons)
+- [x] Undo — status badge changes (4s) and next-step completions (4s)
+- [x] Keyboard shortcut — Cmd/Ctrl+N to open Add Project form
+- [x] Design — dark header, indigo accent, status left-border on cards
