@@ -41,8 +41,11 @@ export function WaitingOnList({ projects }) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-100 px-4 py-3">
-        <h3 className="font-semibold text-gray-900">Waiting On</h3>
+      <div className="border-b border-indigo-100 px-4 py-3">
+        <h3 className="flex items-center gap-2 font-semibold text-gray-900">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
+          Waiting On
+        </h3>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <StatusFilterChips activeStatuses={activeStatuses} onToggle={toggleStatus} />
         </div>

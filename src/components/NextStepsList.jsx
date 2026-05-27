@@ -64,8 +64,11 @@ export function NextStepsList({ projects, setProjects }) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-100 px-4 py-3">
-        <h3 className="font-semibold text-gray-900">Next Steps</h3>
+      <div className="border-b border-indigo-100 px-4 py-3">
+        <h3 className="flex items-center gap-2 font-semibold text-gray-900">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
+          Next Steps
+        </h3>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <StatusFilterChips activeStatuses={activeStatuses} onToggle={toggleStatus} />
         </div>
@@ -83,7 +86,7 @@ export function NextStepsList({ projects, setProjects }) {
                 type="checkbox"
                 checked={false}
                 onChange={() => removeStep(item.projectId, item.rawIdx)}
-                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-blue-600"
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-indigo-600"
               />
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-snug text-gray-800">{item.text}</p>

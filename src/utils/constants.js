@@ -35,6 +35,13 @@ export const PRIORITY_STYLES = {
 
 export const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 }
 
+export const STATUS_BORDER_STYLES = {
+  'Not Started': 'border-l-gray-300',
+  'In Progress': 'border-l-blue-500',
+  'Blocked':     'border-l-red-500',
+  'Complete':    'border-l-green-500',
+}
+
 export function isOverdue(project) {
   if (!project.dueDate || project.status === 'Complete') return false
   const [y, m, d] = project.dueDate.split('-').map(Number)
