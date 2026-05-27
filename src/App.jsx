@@ -1,8 +1,10 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { supabase } from './lib/supabase'
+import { LoginForm } from './components/LoginForm'
 import { ProjectTracker } from './pages/ProjectTracker'
 import { NextStepsList } from './components/NextStepsList'
 import { WaitingOnList } from './components/WaitingOnList'
-import { useLocalStorage } from './hooks/useLocalStorage'
+import { useProjects } from './hooks/useProjects'
 
 function exportProjects(projects) {
   const blob = new Blob([JSON.stringify(projects, null, 2)], { type: 'application/json' })
@@ -15,8 +17,37 @@ function exportProjects(projects) {
 }
 
 function App() {
-  const [projects, setProjects] = useLocalStorage('projects', [])
+  // undefined = checking auth, null = not signed in, object = signed in
+  const [user, setUser] = useState(undefined)
+  const { projects, setProjects, loading } = useProjects(user?.id)
   const importRef = useRef(null)
+  const migratedRef = useRef(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // One-time migration: if localStorage has projects and Supabase has none, offer to import
+  useEffect(() => {
+    if (migratedRef.current || loading || !user || projects.length > 0) return
+    migratedRef.current = true
+    const stored = localStorage.getItem('projects')
+    if (!stored) return
+    try {
+      const local = JSON.parse(stored)
+      if (!Array.isArray(local) || local.length === 0) return
+      if (window.confirm(`Found ${local.length} project${local.length !== 1 ? 's' : ''} saved in this browser. Import them to the cloud?`)) {
+        setProjects(local)
+        localStorage.removeItem('projects')
+      }
+    } catch {
+      // invalid JSON — ignore
+    }
+  }, [loading, user, projects.length, setProjects])
 
   function handleImport(e) {
     const file = e.target.files[0]
@@ -37,6 +68,16 @@ function App() {
     e.target.value = ''
   }
 
+  if (user === undefined || (user && loading)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <span className="text-sm text-gray-400">Loading…</span>
+      </div>
+    )
+  }
+
+  if (!user) return <LoginForm />
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b-2 border-indigo-500 bg-slate-900 px-6 py-4">
@@ -54,6 +95,12 @@ function App() {
               className="text-sm text-slate-300 transition-colors hover:text-white"
             >
               Import
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="text-sm text-slate-400 transition-colors hover:text-slate-200"
+            >
+              Sign out
             </button>
             <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
           </div>
