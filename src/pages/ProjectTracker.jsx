@@ -1,49 +1,62 @@
 import { useMemo, useState } from 'react'
 import { ProjectCard } from '../components/ProjectCard'
 import { ProjectForm } from '../components/ProjectForm'
-
-const STATUSES = ['Not Started', 'In Progress', 'Blocked', 'Complete']
-
-const STATUS_STYLES = {
-  'Not Started': 'bg-gray-100 text-gray-600',
-  'In Progress': 'bg-blue-100 text-blue-700',
-  'Blocked':     'bg-red-100 text-red-700',
-  'Complete':    'bg-green-100 text-green-700',
-}
-
-const STATUS_ACTIVE_STYLES = {
-  'Not Started': 'bg-gray-500 text-white',
-  'In Progress': 'bg-blue-600 text-white',
-  'Blocked':     'bg-red-600 text-white',
-  'Complete':    'bg-green-600 text-white',
-}
+import { StatusFilterChips } from '../components/StatusFilterChips'
+import {
+  STATUSES,
+  STATUS_STYLES,
+  PRIORITY_ORDER,
+  isOverdue,
+} from '../utils/constants'
 
 const SORT_OPTIONS = [
-  { value: 'due',    label: 'Due Date' },
-  { value: 'name',   label: 'Name (A → Z)' },
-  { value: 'name-z', label: 'Name (Z → A)' },
-  { value: 'status', label: 'Status' },
-  { value: 'member', label: 'Member' },
-  { value: 'type',   label: 'Project Type' },
+  { value: 'due',      label: 'Due Date' },
+  { value: 'priority', label: 'Priority' },
+  { value: 'name',     label: 'Name (A → Z)' },
+  { value: 'name-z',   label: 'Name (Z → A)' },
+  { value: 'status',   label: 'Status' },
+  { value: 'member',   label: 'Member' },
+  { value: 'type',     label: 'Project Type' },
 ]
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
 }
 
-function applyFiltersAndSort(projects, activeStatuses, sortBy) {
-  let result = activeStatuses.length > 0
-    ? projects.filter(p => activeStatuses.includes(p.status))
-    : projects
+function applyFiltersAndSort(projects, activeStatuses, filterOverdue, searchQuery, sortBy) {
+  const q = searchQuery.trim().toLowerCase()
+  let result = projects
+
+  if (activeStatuses.length > 0) {
+    result = result.filter(p => activeStatuses.includes(p.status))
+  }
+  if (filterOverdue) {
+    result = result.filter(isOverdue)
+  }
+  if (q) {
+    result = result.filter(
+      p =>
+        p.projectName.toLowerCase().includes(q) ||
+        (p.member || '').toLowerCase().includes(q)
+    )
+  }
 
   return [...result].sort((a, b) => {
+    const aOver = isOverdue(a)
+    const bOver = isOverdue(b)
+    if (aOver !== bOver) return aOver ? -1 : 1
+
     switch (sortBy) {
       case 'due': {
-        // Projects with no due date sort to the end
         if (!a.dueDate && !b.dueDate) return 0
         if (!a.dueDate) return 1
         if (!b.dueDate) return -1
         return a.dueDate.localeCompare(b.dueDate)
+      }
+      case 'priority': {
+        const pa = PRIORITY_ORDER[a.priority] ?? 99
+        const pb = PRIORITY_ORDER[b.priority] ?? 99
+        return pa - pb
       }
       case 'name':   return a.projectName.localeCompare(b.projectName)
       case 'name-z': return b.projectName.localeCompare(a.projectName)
@@ -60,12 +73,22 @@ export function ProjectTracker({ projects, setProjects }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editingProject, setEditingProject] = useState(null)
   const [activeStatuses, setActiveStatuses] = useState([])
+  const [filterOverdue, setFilterOverdue] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('due')
 
   const displayed = useMemo(
-    () => applyFiltersAndSort(projects, activeStatuses, sortBy),
-    [projects, activeStatuses, sortBy]
+    () => applyFiltersAndSort(projects, activeStatuses, filterOverdue, searchQuery, sortBy),
+    [projects, activeStatuses, filterOverdue, searchQuery, sortBy]
   )
+
+  const statusCounts = useMemo(() => {
+    const counts = {}
+    STATUSES.forEach(s => { counts[s] = 0 })
+    projects.forEach(p => { counts[p.status] = (counts[p.status] || 0) + 1 })
+    counts.Overdue = projects.filter(isOverdue).length
+    return counts
+  }, [projects])
 
   function handleSave(formData) {
     if (editingProject) {
@@ -87,6 +110,12 @@ export function ProjectTracker({ projects, setProjects }) {
     setProjects(prev => prev.filter(p => p.id !== id))
   }
 
+  function handleStatusChange(id, newStatus) {
+    setProjects(prev =>
+      prev.map(p => (p.id === id ? { ...p, status: newStatus } : p))
+    )
+  }
+
   function closeForm() {
     setFormOpen(false)
     setEditingProject(null)
@@ -100,6 +129,13 @@ export function ProjectTracker({ projects, setProjects }) {
 
   const total = projects.length
   const showing = displayed.length
+  const isFiltered = activeStatuses.length > 0 || filterOverdue || searchQuery.trim()
+
+  function clearFilters() {
+    setActiveStatuses([])
+    setFilterOverdue(false)
+    setSearchQuery('')
+  }
 
   return (
     <div>
@@ -107,9 +143,9 @@ export function ProjectTracker({ projects, setProjects }) {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
           <p className="mt-0.5 text-sm text-gray-500">
-            {showing === total
-              ? `${total} ${total === 1 ? 'project' : 'projects'}`
-              : `${showing} of ${total} projects`}
+            {isFiltered
+              ? `${showing} of ${total} ${total === 1 ? 'project' : 'projects'}`
+              : `${total} ${total === 1 ? 'project' : 'projects'}`}
           </p>
         </div>
         <button onClick={() => setFormOpen(true)} className="btn-primary">
@@ -118,44 +154,72 @@ export function ProjectTracker({ projects, setProjects }) {
       </div>
 
       {total > 0 && (
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-1.5">
-            {STATUSES.map(status => {
-              const active = activeStatuses.includes(status)
-              const style = active ? STATUS_ACTIVE_STYLES[status] : STATUS_STYLES[status]
-              return (
-                <button
-                  key={status}
-                  onClick={() => toggleStatus(status)}
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${style}`}
-                >
-                  {status}
-                </button>
-              )
-            })}
-            {activeStatuses.length > 0 && (
-              <button
-                onClick={() => setActiveStatuses([])}
-                className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-400 hover:text-gray-600"
-              >
-                Clear
-              </button>
+        <>
+          {/* Summary bar */}
+          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {STATUSES.map(status => (
+              <span key={status} className="flex items-center gap-1.5">
+                <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status].split(' ')[0]}`} />
+                <span className="text-gray-500">{status}:</span>
+                <span className="font-semibold text-gray-800">{statusCounts[status]}</span>
+              </span>
+            ))}
+            {statusCounts.Overdue > 0 && (
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="text-gray-500">Overdue:</span>
+                <span className="font-semibold text-red-600">{statusCounts.Overdue}</span>
+              </span>
             )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <label className="text-xs text-gray-400">Sort by</label>
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
-              className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >
-              {SORT_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+          {/* Search */}
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by project or member…"
+            className="input mb-3"
+          />
+
+          {/* Filter chips + sort */}
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-1.5">
+              <StatusFilterChips activeStatuses={activeStatuses} onToggle={toggleStatus} />
+              {statusCounts.Overdue > 0 && (
+                <button
+                  onClick={() => setFilterOverdue(v => !v)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                    filterOverdue ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  Overdue
+                </button>
+              )}
+              {isFiltered && (
+                <button
+                  onClick={clearFilters}
+                  className="rounded-full px-2.5 py-1 text-xs font-medium text-gray-400 hover:text-gray-600"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              <label className="text-xs text-gray-400">Sort by</label>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              >
+                {SORT_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {total === 0 ? (
@@ -165,8 +229,8 @@ export function ProjectTracker({ projects, setProjects }) {
         </div>
       ) : displayed.length === 0 ? (
         <div className="py-20 text-center text-gray-400">
-          <p className="text-lg">No projects match the selected filters.</p>
-          <button onClick={() => setActiveStatuses([])} className="mt-2 text-sm text-blue-500 hover:text-blue-700">
+          <p className="text-lg">No projects match the current filters.</p>
+          <button onClick={clearFilters} className="mt-2 text-sm text-blue-500 hover:text-blue-700">
             Clear filters
           </button>
         </div>
@@ -178,6 +242,7 @@ export function ProjectTracker({ projects, setProjects }) {
               project={project}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onStatusChange={handleStatusChange}
             />
           ))}
         </div>

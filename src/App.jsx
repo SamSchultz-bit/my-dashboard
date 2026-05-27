@@ -1,9 +1,21 @@
+import { useEffect } from 'react'
 import { ProjectTracker } from './pages/ProjectTracker'
 import { NextStepsList } from './components/NextStepsList'
+import { WaitingOnList } from './components/WaitingOnList'
 import { useLocalStorage } from './hooks/useLocalStorage'
+import { DEMO_PROJECTS } from './utils/demoData'
 
 function App() {
-  const [projects, setProjects] = useLocalStorage('projects', [])
+  const [projects, setProjects] = useLocalStorage('projects', DEMO_PROJECTS)
+  const [hasSeeded, setHasSeeded] = useLocalStorage('hasSeeded', false)
+
+  useEffect(() => {
+    localStorage.removeItem('checkedSteps')
+    if (!hasSeeded && projects.length === 0) {
+      setProjects(DEMO_PROJECTS)
+      setHasSeeded(true)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -15,8 +27,9 @@ function App() {
           <div className="min-w-0 flex-1">
             <ProjectTracker projects={projects} setProjects={setProjects} />
           </div>
-          <div className="w-80 shrink-0 sticky top-6">
+          <div className="flex w-80 shrink-0 flex-col gap-4 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
             <NextStepsList projects={projects} setProjects={setProjects} />
+            <WaitingOnList projects={projects} />
           </div>
         </div>
       </main>

@@ -1,39 +1,44 @@
-const STATUS_STYLES = {
-  'Not Started': 'bg-gray-100 text-gray-600',
-  'In Progress': 'bg-blue-100 text-blue-700',
-  'Blocked': 'bg-red-100 text-red-700',
-  'Complete': 'bg-green-100 text-green-700',
-}
+import { useState } from 'react'
+import { STATUS_STYLES, STATUSES, PRIORITY_STYLES } from '../utils/constants'
+import { formatDueDate } from '../utils/formatDate'
 
-function formatDueDate(dateStr) {
-  if (!dateStr) return null
-  // Parse as local date to avoid UTC-offset display shifts
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const overdue = date < today
-  const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  return { label, overdue }
-}
+/** @param {{ project: object, onEdit: function, onDelete: function, onStatusChange: function }} props */
+export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
+  const [showConfirm, setShowConfirm] = useState(false)
 
-/** @param {{ project: object, onEdit: function, onDelete: function }} props */
-export function ProjectCard({ project, onEdit, onDelete }) {
   const statusStyle = STATUS_STYLES[project.status] ?? 'bg-gray-100 text-gray-600'
+  const priorityStyle = project.priority ? PRIORITY_STYLES[project.priority] : null
   const due = formatDueDate(project.dueDate)
+
+  function handleStatusClick() {
+    const idx = STATUSES.indexOf(project.status)
+    const next = STATUSES[(idx + 1) % STATUSES.length]
+    onStatusChange(project.id, next)
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-gray-900">{project.projectName}</h3>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="font-semibold text-gray-900">{project.projectName}</h3>
+            {priorityStyle && (
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${priorityStyle}`}>
+                {project.priority}
+              </span>
+            )}
+          </div>
           {project.projectType && (
             <span className="text-sm text-gray-500">{project.projectType}</span>
           )}
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyle}`}>
+        <button
+          onClick={handleStatusClick}
+          title="Click to advance status"
+          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity hover:opacity-75 cursor-pointer ${statusStyle}`}
+        >
           {project.status}
-        </span>
+        </button>
       </div>
 
       <dl className="space-y-1.5 text-sm">
@@ -50,19 +55,41 @@ export function ProjectCard({ project, onEdit, onDelete }) {
         <Row label="Next steps" value={project.nextSteps} />
       </dl>
 
-      <div className="flex gap-3 border-t border-gray-100 pt-3">
-        <button
-          onClick={() => onEdit(project)}
-          className="text-sm font-medium text-blue-600 hover:text-blue-800"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => onDelete(project.id)}
-          className="text-sm font-medium text-red-500 hover:text-red-700"
-        >
-          Delete
-        </button>
+      <div className="border-t border-gray-100 pt-3">
+        {showConfirm ? (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Delete this project?</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="text-sm font-medium text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onDelete(project.id)}
+                className="text-sm font-medium text-red-600 hover:text-red-800"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <button
+              onClick={() => onEdit(project)}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => setShowConfirm(true)}
+              className="text-sm font-medium text-red-500 hover:text-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -71,7 +98,7 @@ export function ProjectCard({ project, onEdit, onDelete }) {
 function Row({ label, value }) {
   return (
     <div className="flex gap-1">
-      <dt className="font-medium text-gray-400 shrink-0">{label}:</dt>
+      <dt className="shrink-0 font-medium text-gray-400">{label}:</dt>
       <dd className="text-gray-700">{value || '—'}</dd>
     </div>
   )
