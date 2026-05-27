@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { STATUS_STYLES, STATUSES, PRIORITY_STYLES } from '../utils/constants'
+import { STATUS_STYLES, STATUSES, PRIORITY_STYLES, STATUS_BORDER_STYLES } from '../utils/constants'
 import { formatDueDate } from '../utils/formatDate'
 
 /** @param {{ project: object, onEdit: function, onDelete: function, onStatusChange: function }} props */
@@ -8,6 +8,7 @@ export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
 
   const statusStyle = STATUS_STYLES[project.status] ?? 'bg-gray-100 text-gray-600'
   const priorityStyle = project.priority ? PRIORITY_STYLES[project.priority] : null
+  const borderStyle = STATUS_BORDER_STYLES[project.status] ?? 'border-l-gray-300'
   const due = formatDueDate(project.dueDate)
 
   function handleStatusClick() {
@@ -17,7 +18,7 @@ export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className={`flex flex-col gap-3 rounded-xl border border-gray-200 border-l-4 bg-white p-5 shadow-sm transition-shadow duration-150 hover:shadow-md ${borderStyle}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -78,7 +79,7 @@ export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
           <div className="flex gap-3">
             <button
               onClick={() => onEdit(project)}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
             >
               Edit
             </button>
@@ -98,8 +99,8 @@ export function ProjectCard({ project, onEdit, onDelete, onStatusChange }) {
 function Row({ label, value }) {
   return (
     <div className="flex gap-1">
-      <dt className="shrink-0 font-medium text-gray-400">{label}:</dt>
-      <dd className="text-gray-700">{value || '—'}</dd>
+      <dt className="shrink-0 font-medium text-gray-500">{label}:</dt>
+      <dd className="leading-snug text-gray-700">{value || '—'}</dd>
     </div>
   )
 }

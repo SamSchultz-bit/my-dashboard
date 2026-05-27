@@ -156,16 +156,16 @@ export function ProjectTracker({ projects, setProjects }) {
       {total > 0 && (
         <>
           {/* Summary bar */}
-          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <div className="mb-4 flex flex-wrap gap-2">
             {STATUSES.map(status => (
-              <span key={status} className="flex items-center gap-1.5">
+              <span key={status} className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm">
                 <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[status].split(' ')[0]}`} />
                 <span className="text-gray-500">{status}:</span>
                 <span className="font-semibold text-gray-800">{statusCounts[status]}</span>
               </span>
             ))}
             {statusCounts.Overdue > 0 && (
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-sm shadow-sm">
                 <span className="h-2 w-2 rounded-full bg-red-500" />
                 <span className="text-gray-500">Overdue:</span>
                 <span className="font-semibold text-red-600">{statusCounts.Overdue}</span>
@@ -211,7 +211,7 @@ export function ProjectTracker({ projects, setProjects }) {
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               >
                 {SORT_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -230,7 +230,7 @@ export function ProjectTracker({ projects, setProjects }) {
       ) : displayed.length === 0 ? (
         <div className="py-20 text-center text-gray-400">
           <p className="text-lg">No projects match the current filters.</p>
-          <button onClick={clearFilters} className="mt-2 text-sm text-blue-500 hover:text-blue-700">
+          <button onClick={clearFilters} className="mt-2 text-sm text-indigo-500 hover:text-indigo-700">
             Clear filters
           </button>
         </div>
